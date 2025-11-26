@@ -422,7 +422,10 @@ export const digitalTwinStories: UserStoryTemplate[] = [
 /**
  * Bulk create all Digital Twin stories
  */
-export async function seedDigitalTwinStories(userId: number): Promise<{
+export async function seedDigitalTwinStories(
+  userId: number,
+  stories: UserStoryTemplate[] = digitalTwinStories
+): Promise<{
   epicsCreated: number;
   storiesCreated: number;
 }> {
@@ -431,7 +434,7 @@ export async function seedDigitalTwinStories(userId: number): Promise<{
 
   // Group stories by epic
   const epicGroups = new Map<string, UserStoryTemplate[]>();
-  for (const story of digitalTwinStories) {
+  for (const story of stories) {
     if (!epicGroups.has(story.epicTitle)) {
       epicGroups.set(story.epicTitle, []);
     }

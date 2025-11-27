@@ -12,8 +12,8 @@ import { eq, and } from "drizzle-orm";
 
 // Intent keywords for routing
 const INTENT_KEYWORDS = {
-  code_generation: ['code', 'implement', 'build', 'create app', 'develop', 'program', 'function', 'class', 'api'],
-  security_audit: ['security', 'vulnerability', 'owasp', 'threat', 'penetration test', 'audit security'],
+  code_generation: ['implement', 'build', 'create app', 'develop', 'program', 'function', 'class', 'api', 'write code', 'generate code'],
+  security_audit: ['security', 'vulnerability', 'owasp', 'threat', 'penetration test', 'audit security', 'sql injection', 'xss', 'csrf', 'check for vulnerabilities', 'security scan'],
   dependency_validation: ['dependency', 'package', 'npm', 'library', 'malicious', 'license'],
   compliance: ['compliance', 'gdpr', 'soc 2', 'iso 27001', 'regulation', 'governance'],
   legal: ['contract', 'legal', 'terms', 'agreement', 'liability'],

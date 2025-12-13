@@ -6,6 +6,7 @@ import { storagePut } from "../storage";
 import { messageBus, broadcastNotification, sendResult } from "./messageBus";
 import { GuardianAgent } from "./guardianAgent";
 import { emitGateExecution, emitPipelineUpdate } from "../_core/websocket";
+import { GitAutoCommitService } from "./gitAutoCommit";
 
 export class GateExecutor {
   /**
@@ -83,6 +84,14 @@ export class GateExecutor {
             mimeType: artifact.mimeType,
           });
         }
+
+        // Auto-commit artifacts to Git
+        await GitAutoCommitService.commitGateArtifacts(
+          projectId,
+          gateNumber,
+          execution.id,
+          result.artifacts
+        );
       }
 
       // Update execution record

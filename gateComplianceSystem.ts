@@ -412,8 +412,8 @@ export async function gate10_CostValidation(
 ): Promise<GateResult> {
   logger.info('[Gate 10] Validating costs');
   
-  const zeroC ostPlatforms = ['Render.com (free tier)', 'Railway ($5 credit)', 'Vercel (free)', 'Netlify (free)', 'Oracle Cloud (always free)'];
-  const isZeroCostCompliant = zeroC ostPlatforms.some(p => deploymentPlatform.toLowerCase().includes(p.toLowerCase().split('(')[0].trim()));
+  const zeroCostPlatforms = ['Render.com (free tier)', 'Railway ($5 credit)', 'Vercel (free)', 'Netlify (free)', 'Oracle Cloud (always free)'];
+  const isZeroCostCompliant = zeroCostPlatforms.some(p => deploymentPlatform.toLowerCase().includes(p.toLowerCase().split('(')[0].trim()));
   
   const prompt = `You are Doris Fontaine, the Financial Steward AI. Review this cost structure:
 
@@ -466,7 +466,7 @@ Provide pass/fail, score, findings, recommendations, and blockers as JSON.`;
     // Override if zero-cost mandate violated
     if (!isZeroCostCompliant) {
       result.passed = false;
-      result.blockers.push(`ZERO-COST VIOLATION: ${deploymentPlatform} is not approved. Use: ${zeroC ostPlatforms.join(', ')}`);
+      result.blockers.push(`ZERO-COST VIOLATION: ${deploymentPlatform} is not approved. Use: ${zeroCostPlatforms.join(', ')}`);
     }
     
     return {
@@ -619,8 +619,8 @@ export async function runAllGates(projectData: {
  * Generate certification document
  */
 export function generateCertification(gateResult: GateResult): string {
-  return `
-# Gate ${gateResult.gateNumber} Certification: ${gateResult.gateName}
+  const evidenceJson = JSON.stringify(gateResult.evidence, null, 2);
+  return `# Gate ${gateResult.gateNumber} Certification: ${gateResult.gateName}
 
 **Status**: ${gateResult.passed ? '✅ PASSED' : '❌ FAILED'}
 **Score**: ${gateResult.score}/100
@@ -643,7 +643,7 @@ ${gateResult.blockers.length > 0 ? gateResult.blockers.map(b => `- ⚠️ ${b}`)
 ## Evidence
 
 \`\`\`json
-${JSON.stringify(gateResult.evidence, null, 2)}
+${evidenceJson}
 \`\`\`
 
 ---

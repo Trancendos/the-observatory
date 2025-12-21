@@ -86,7 +86,7 @@ export async function getEstateContext(estateId: string): Promise<EstateContext 
   const allTags: string[] = [];
 
   for (const item of items) {
-    itemsByType[item.type] = (itemsByType[item.type] || 0) + 1;
+    itemsByType[item.scanType] = (itemsByType[item.scanType] || 0) + 1;
     if (item.tags) {
       allTags.push(...item.tags);
     }
@@ -212,7 +212,15 @@ export async function getPlatformContext(): Promise<PlatformContext> {
     .map(([tag]) => tag);
 
   // Identify cross-estate patterns
-  const crossEstatePatterns = identifyCrossEstatePatterns(items);
+  const crossEstatePatterns = identifyCrossEstatePatterns(
+    items.map(item => ({
+      id: item.id,
+      estateId: item.estateId,
+      name: item.name,
+      type: item.scanType,
+      tags: item.tags,
+    }))
+  );
 
   // Calculate platform health
   const avgHealthScore =
@@ -284,7 +292,7 @@ function identifyCrossEstatePatterns(
   // Filter to patterns that appear in multiple estates
   const crossEstatePatterns: { pattern: string; count: number; estates: string[] }[] = [];
 
-  for (const [pattern, data] of patternMap.entries()) {
+  for (const [pattern, data] of Array.from(patternMap.entries())) {
     if (data.estates.size >= 2) {
       crossEstatePatterns.push({
         pattern,
@@ -351,7 +359,7 @@ export async function getCrossModuleContext(
     (i.tags || []).some((t) => t.includes("api") || t.includes("endpoint"))
   );
   for (const item of apiItems) {
-    integrationPoints.push(`${item.name} (${item.type})`);
+    integrationPoints.push(`${item.name} (${item.scanType})`);
   }
 
   // Generate recommendations

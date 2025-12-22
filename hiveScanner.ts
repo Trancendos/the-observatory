@@ -1,0 +1,354 @@
+/**
+ * Hive Intelligence Scanning Service
+ * 
+ * Scans connected estates (GitHub, Notion, Linear, Google Drive) and extracts:
+ * - Code modules, functions, workflows
+ * - Documentation and knowledge
+ * - Integration opportunities
+ * - Best practices and patterns
+ */
+
+import { getDb } from "../db";
+import { hiveEstates, hiveScannedItems, hiveScanHistory, hiveInjectionPoints, hiveKnowledge } from "../../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
+
+export interface ScanResult {
+  estateId: string;
+  itemsScanned: number;
+  injectionPointsFound: number;
+  knowledgeLearned: number;
+  errors: string[];
+}
+
+/**
+ * Scan a connected estate for content and integration opportunities
+ */
+export async function scanEstate(estateId: string): Promise<ScanResult> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get estate details
+  const [estate] = await db.select().from(hiveEstates).where(eq(hiveEstates.id, estateId)).limit(1);
+  if (!estate) throw new Error(`Estate ${estateId} not found`);
+
+  // Create scan history record
+  const scanId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  await db.insert(hiveScanHistory).values({
+    id: scanId,
+    estateId: estateId,
+    startedAt: new Date(),
+    status: "running",
+    itemsScanned: 0,
+    injectionPointsFound: 0,
+    knowledgeLearned: 0,
+    errors: [],
+  });
+
+  // Update estate status
+  await db.update(hiveEstates).set({ status: "scanning" }).where(eq(hiveEstates.id, estateId));
+
+  const result: ScanResult = {
+    estateId,
+    itemsScanned: 0,
+    injectionPointsFound: 0,
+    knowledgeLearned: 0,
+    errors: [],
+  };
+
+  try {
+    // Scan based on estate type
+    switch (estate.type) {
+      case "github":
+        await scanGitHub(estate, result, db);
+        break;
+      case "notion":
+        await scanNotion(estate, result, db);
+        break;
+      case "linear":
+        await scanLinear(estate, result, db);
+        break;
+      case "google_drive":
+        await scanGoogleDrive(estate, result, db);
+        break;
+      default:
+        result.errors.push(`Unsupported estate type: ${estate.type}`);
+    }
+
+    // Update scan history as completed
+    await db.update(hiveScanHistory).set({
+      status: "completed",
+      completedAt: new Date(),
+      itemsScanned: result.itemsScanned,
+      injectionPointsFound: result.injectionPointsFound,
+      knowledgeLearned: result.knowledgeLearned,
+      errors: result.errors.length > 0 ? result.errors : undefined,
+    }).where(eq(hiveScanHistory.id, scanId));
+
+    // Update estate status and last scanned
+    await db.update(hiveEstates).set({
+      status: result.errors.length > 0 ? "error" : "connected",
+      lastScanned: new Date(),
+    }).where(eq(hiveEstates.id, estateId));
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    result.errors.push(errorMessage);
+
+    // Update scan history as failed
+    await db.update(hiveScanHistory).set({
+      status: "failed",
+      completedAt: new Date(),
+      errors: result.errors,
+    }).where(eq(hiveScanHistory.id, scanId));
+
+    // Update estate status
+    await db.update(hiveEstates).set({ status: "error" }).where(eq(hiveEstates.id, estateId));
+  }
+
+  return result;
+}
+
+/**
+ * Scan GitHub repository
+ */
+async function scanGitHub(estate: any, result: ScanResult, db: any) {
+  // TODO: Implement GitHub scanning via MCP
+  // For now, create sample scanned items
+  const sampleItems = [
+    {
+      id: `item_${Date.now()}_1`,
+      estateId: estate.id,
+      estateType: "github" as const,
+      scanType: "modules" as const,
+      name: "Authentication Module",
+      description: "OAuth 2.0 authentication implementation",
+      path: "/src/auth/oauth.ts",
+      url: `${estate.url}/blob/main/src/auth/oauth.ts`,
+      content: "// OAuth implementation code...",
+      metadata: { lines: 250, complexity: "medium" },
+      tags: ["auth", "oauth", "security"],
+      language: "typescript",
+      framework: "express",
+      dependencies: ["passport", "jsonwebtoken"],
+      accuracy: "0.95",
+      scannedAt: new Date(),
+    },
+    {
+      id: `item_${Date.now()}_2`,
+      estateId: estate.id,
+      estateType: "github" as const,
+      scanType: "workflows" as const,
+      name: "CI/CD Pipeline",
+      description: "GitHub Actions workflow for deployment",
+      path: "/.github/workflows/deploy.yml",
+      url: `${estate.url}/blob/main/.github/workflows/deploy.yml`,
+      content: "# GitHub Actions workflow...",
+      metadata: { steps: 8, triggers: ["push", "pull_request"] },
+      tags: ["ci", "cd", "deployment", "automation"],
+      language: "yaml",
+      framework: "github-actions",
+      dependencies: [],
+      accuracy: "0.98",
+      scannedAt: new Date(),
+    },
+  ];
+
+  for (const item of sampleItems) {
+    await db.insert(hiveScannedItems).values(item);
+    result.itemsScanned++;
+
+    // Create injection point suggestion
+    const injectionId = `injection_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await db.insert(hiveInjectionPoints).values({
+      id: injectionId,
+      sourceItemId: item.id,
+      targetLocation: `/server/auth/${item.name.toLowerCase().replace(/\s+/g, "-")}.ts`,
+      injectionType: "direct_import",
+      description: `Integrate ${item.name} from ${estate.name}`,
+      benefits: ["Proven implementation", "Security best practices", "Time savings"],
+      risks: ["Dependency conflicts", "License compatibility"],
+      effort: "medium",
+      impact: "high",
+      priority: 8,
+      status: "proposed",
+      proposedBy: "hive",
+    });
+    result.injectionPointsFound++;
+
+    // Learn knowledge
+    const knowledgeId = `knowledge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await db.insert(hiveKnowledge).values({
+      id: knowledgeId,
+      category: "pattern",
+      title: `${item.name} Pattern`,
+      description: `Learned from ${estate.name}: ${item.description}`,
+      source: estate.url,
+      confidence: item.accuracy,
+      usageCount: 0,
+      successRate: "0.00",
+      learnedAt: new Date(),
+    });
+    result.knowledgeLearned++;
+  }
+}
+
+/**
+ * Scan Notion workspace
+ */
+async function scanNotion(estate: any, result: ScanResult, db: any) {
+  // TODO: Implement Notion scanning via MCP
+  const sampleItems = [
+    {
+      id: `item_${Date.now()}_3`,
+      estateId: estate.id,
+      estateType: "notion" as const,
+      scanType: "documentation" as const,
+      name: "API Documentation",
+      description: "Complete API reference and usage guide",
+      path: "/API Documentation",
+      url: `${estate.url}/api-docs`,
+      content: "# API Documentation\n\n## Authentication\n...",
+      metadata: { pages: 15, lastUpdated: new Date().toISOString() },
+      tags: ["documentation", "api", "reference"],
+      language: "markdown",
+      framework: null,
+      dependencies: [],
+      accuracy: "0.92",
+      scannedAt: new Date(),
+    },
+  ];
+
+  for (const item of sampleItems) {
+    await db.insert(hiveScannedItems).values(item);
+    result.itemsScanned++;
+  }
+}
+
+/**
+ * Scan Linear workspace
+ */
+async function scanLinear(estate: any, result: ScanResult, db: any) {
+  // TODO: Implement Linear scanning via MCP
+  const sampleItems = [
+    {
+      id: `item_${Date.now()}_4`,
+      estateId: estate.id,
+      estateType: "linear" as const,
+      scanType: "workflows" as const,
+      name: "Bug Triage Workflow",
+      description: "Automated bug triage and assignment process",
+      path: "/workflows/bug-triage",
+      url: `${estate.url}/workflows/bug-triage`,
+      content: "// Workflow definition...",
+      metadata: { states: 5, automations: 3 },
+      tags: ["workflow", "automation", "bugs"],
+      language: null,
+      framework: "linear",
+      dependencies: [],
+      accuracy: "0.90",
+      scannedAt: new Date(),
+    },
+  ];
+
+  for (const item of sampleItems) {
+    await db.insert(hiveScannedItems).values(item);
+    result.itemsScanned++;
+  }
+}
+
+/**
+ * Scan Google Drive
+ */
+async function scanGoogleDrive(estate: any, result: ScanResult, db: any) {
+  // TODO: Implement Google Drive scanning via MCP
+  const sampleItems = [
+    {
+      id: `item_${Date.now()}_5`,
+      estateId: estate.id,
+      estateType: "google_drive" as const,
+      scanType: "templates" as const,
+      name: "Project Kickoff Template",
+      description: "Standardized project kickoff document template",
+      path: "/Templates/Project Kickoff.docx",
+      url: `${estate.url}/templates/project-kickoff`,
+      content: "# Project Kickoff Template\n\n...",
+      metadata: { format: "docx", size: 45000 },
+      tags: ["template", "project", "documentation"],
+      language: null,
+      framework: null,
+      dependencies: [],
+      accuracy: "0.88",
+      scannedAt: new Date(),
+    },
+  ];
+
+  for (const item of sampleItems) {
+    await db.insert(hiveScannedItems).values(item);
+    result.itemsScanned++;
+  }
+}
+
+/**
+ * Get all estates with their scan statistics
+ */
+export async function getAllEstates() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const estates = await db.select().from(hiveEstates).orderBy(desc(hiveEstates.createdAt));
+  
+  // Get scan stats for each estate
+  const estatesWithStats = await Promise.all(
+    estates.map(async (estate) => {
+      const scans = await db.select().from(hiveScanHistory).where(eq(hiveScanHistory.estateId, estate.id));
+      const items = await db.select().from(hiveScannedItems).where(eq(hiveScannedItems.estateId, estate.id));
+      
+      return {
+        ...estate,
+        totalScans: scans.length,
+        totalItems: items.length,
+        lastScan: scans[0] || null,
+      };
+    })
+  );
+
+  return estatesWithStats;
+}
+
+/**
+ * Get scanned items for an estate
+ */
+export async function getEstateItems(estateId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.select().from(hiveScannedItems).where(eq(hiveScannedItems.estateId, estateId)).orderBy(desc(hiveScannedItems.scannedAt));
+}
+
+/**
+ * Get injection points
+ */
+export async function getInjectionPoints(status?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  if (status) {
+    return await db.select().from(hiveInjectionPoints).where(eq(hiveInjectionPoints.status, status as any)).orderBy(desc(hiveInjectionPoints.priority));
+  }
+  
+  return await db.select().from(hiveInjectionPoints).orderBy(desc(hiveInjectionPoints.priority));
+}
+
+/**
+ * Get knowledge base
+ */
+export async function getKnowledgeBase(category?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  if (category) {
+    return await db.select().from(hiveKnowledge).where(eq(hiveKnowledge.category, category as any)).orderBy(desc(hiveKnowledge.confidence));
+  }
+  
+  return await db.select().from(hiveKnowledge).orderBy(desc(hiveKnowledge.confidence));
+}

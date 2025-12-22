@@ -431,15 +431,15 @@ export async function getLearningStatistics(): Promise<{
       .limit(100),
   ]);
 
-  // Calculate strong relationships (confidence > 0.7)
+  // Calculate strong relationships (priority >= 7 out of 10)
   let strongCount = 0;
-  let totalConfidence = 0;
+  let totalPriority = 0;
 
   for (const point of injectionPoints) {
-    if (point.confidence && point.confidence > 0.7) {
+    if (point.priority >= 7) {
       strongCount++;
     }
-    totalConfidence += point.confidence || 0;
+    totalPriority += point.priority;
   }
 
   // Count recent feedback (last 7 days)
@@ -453,7 +453,7 @@ export async function getLearningStatistics(): Promise<{
     strongRelationships: strongCount,
     learningPatterns: patterns.length,
     averageConfidence:
-      injectionPoints.length > 0 ? totalConfidence / injectionPoints.length : 0,
+      injectionPoints.length > 0 ? totalPriority / (injectionPoints.length * 10) : 0, // Normalize priority (1-10) to 0-1 scale
     recentFeedback: recentFeedbackCount,
   };
 }

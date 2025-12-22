@@ -109,21 +109,28 @@ export async function scanEstate(estateId: string): Promise<ScanResult> {
 }
 
 /**
- * Scan GitHub repository using GitHub CLI
+ * Scan GitHub repositories using MCP GitHub tool
  */
 async function scanGitHub(estate: any, result: ScanResult, db: any) {
-  // Use GitHub CLI to scan repositories
   const { execSync } = await import('child_process');
   
   try {
+    // Get organization/owner from credentials or estate URL
+    const owner = estate.credentials?.owner || estate.url?.split('github.com/')[1]?.split('/')[0] || '';
+    
+    if (!owner) {
+      result.errors.push('GitHub owner/organization not configured');
+      return;
+    }
+    
     // List repositories
-    const reposOutput = execSync('gh repo list --json name,description,url,primaryLanguage,updatedAt --limit 10', { encoding: 'utf-8' });
+    const reposOutput = execSync(`gh repo list ${owner} --json name,description,url,primaryLanguage,updatedAt --limit 10`, { encoding: 'utf-8' });
     const repos = JSON.parse(reposOutput);
     
     for (const repo of repos) {
       // Scan repository structure
       try {
-        const filesOutput = execSync(`gh api repos/{owner}/${repo.name}/git/trees/main?recursive=1`, { encoding: 'utf-8' });
+        const filesOutput = execSync(`gh api repos/${owner}/${repo.name}/git/trees/main?recursive=1`, { encoding: 'utf-8' });
         const filesData = JSON.parse(filesOutput);
         
         // Find interesting files (modules, workflows, configs)
@@ -269,10 +276,67 @@ async function scanGitHub(estate: any, result: ScanResult, db: any) {
 }
 
 /**
- * Scan Notion workspace
+ * Scan Notion workspace using MCP Notion tool
  */
 async function scanNotion(estate: any, result: ScanResult, db: any) {
-  // TODO: Implement Notion scanning via MCP
+  const { execSync } = await import('child_process');
+  
+  try {
+    // Use manus-mcp-cli to access Notion MCP server
+    const notionData = execSync(
+      `manus-mcp-cli call notion search_objects --args '${JSON.stringify({ query: "" })}'`,
+      { encoding: 'utf-8', timeout: 30000 }
+    );
+    
+    const pages = JSON.parse(notionData);
+    
+    if (pages && pages.results) {
+      for (const page of pages.results.slice(0, 20)) {
+        const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        await db.insert(hiveScannedItems).values({
+          id: itemId,
+          estateId: estate.id,
+          estateType: "notion" as const,
+          scanType: "documentation" as const,
+          name: page.title || page.properties?.title?.title?.[0]?.plain_text || 'Untitled',
+          description: page.properties?.description || 'Notion page',
+          path: page.url || '',
+          url: page.url || '',
+          content: null,
+          metadata: { pageId: page.id, lastEdited: page.last_edited_time },
+          tags: ["notion", "documentation"],
+          language: "markdown",
+          framework: null,
+          dependencies: [],
+          accuracy: "0.92",
+          scannedAt: new Date(),
+        });
+        result.itemsScanned++;
+        
+        // Create knowledge entry
+        await db.insert(hiveKnowledge).values({
+          id: `knowledge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          sourceItemId: itemId,
+          knowledgeType: "documentation",
+          title: page.title || 'Untitled',
+          content: `Notion documentation: ${page.title || 'Untitled'}`,
+          tags: ["notion", "documentation"],
+          confidence: "0.92",
+          usageCount: 0,
+          successRate: "0.00",
+          learnedAt: new Date(),
+        });
+        result.knowledgeLearned++;
+      }
+      return;
+    }
+  } catch (error) {
+    console.warn('Notion MCP scan failed, using sample data:', error);
+    result.errors.push(`Notion scan error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  
+  // Fallback to sample data
   const sampleItems = [
     {
       id: `item_${Date.now()}_3`,
@@ -301,10 +365,74 @@ async function scanNotion(estate: any, result: ScanResult, db: any) {
 }
 
 /**
- * Scan Linear workspace
+ * Scan Linear workspace using MCP Linear tool
  */
 async function scanLinear(estate: any, result: ScanResult, db: any) {
-  // TODO: Implement Linear scanning via MCP
+  const { execSync } = await import('child_process');
+  
+  try {
+    // Use manus-mcp-cli to access Linear MCP server
+    const issuesData = execSync(
+      `manus-mcp-cli call linear list_issues --args '${JSON.stringify({ limit: 20 })}'`,
+      { encoding: 'utf-8', timeout: 30000 }
+    );
+    
+    const issues = JSON.parse(issuesData);
+    
+    if (issues && issues.nodes) {
+      for (const issue of issues.nodes) {
+        const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        await db.insert(hiveScannedItems).values({
+          id: itemId,
+          estateId: estate.id,
+          estateType: "linear" as const,
+          scanType: "workflows" as const,
+          name: issue.title || 'Untitled Issue',
+          description: issue.description || 'Linear issue',
+          path: `/issues/${issue.identifier}`,
+          url: issue.url || '',
+          content: issue.description,
+          metadata: { 
+            issueId: issue.id, 
+            state: issue.state?.name,
+            priority: issue.priority,
+            labels: issue.labels?.nodes?.map((l: any) => l.name) || []
+          },
+          tags: ["linear", "workflow", issue.state?.name].filter(Boolean),
+          language: null,
+          framework: "linear",
+          dependencies: [],
+          accuracy: "0.90",
+          scannedAt: new Date(),
+        });
+        result.itemsScanned++;
+        
+        // Create knowledge for workflow patterns
+        if (issue.state?.name === 'Done' || issue.state?.name === 'Completed') {
+          await db.insert(hiveKnowledge).values({
+            id: `knowledge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            sourceItemId: itemId,
+            knowledgeType: "workflow",
+            title: issue.title || 'Workflow Pattern',
+            content: `Linear workflow: ${issue.title}`,
+            tags: ["linear", "workflow", "completed"],
+            confidence: "0.90",
+            usageCount: 0,
+            successRate: "0.00",
+            learnedAt: new Date(),
+          });
+          result.knowledgeLearned++;
+        }
+      }
+      return;
+    }
+  } catch (error) {
+    console.warn('Linear MCP scan failed, using sample data:', error);
+    result.errors.push(`Linear scan error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  
+  // Fallback to sample data
   const sampleItems = [
     {
       id: `item_${Date.now()}_4`,

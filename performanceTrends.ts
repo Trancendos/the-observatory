@@ -78,10 +78,10 @@ export async function aggregateTrends(period: TrendPeriod, date: Date = new Date
         totalExecutions: sql<number>`COUNT(*)`,
         successfulExecutions: sql<number>`SUM(CASE WHEN ${agentTaskHistory.status} = 'completed' THEN 1 ELSE 0 END)`,
         failedExecutions: sql<number>`SUM(CASE WHEN ${agentTaskHistory.status} = 'failed' THEN 1 ELSE 0 END)`,
-        avgDuration: sql<number>`AVG(${agentTaskHistory.duration})`,
-        minDuration: sql<number>`MIN(${agentTaskHistory.duration})`,
-        maxDuration: sql<number>`MAX(${agentTaskHistory.duration})`,
-        totalDuration: sql<number>`SUM(${agentTaskHistory.duration})`,
+        avgDuration: sql<number>`AVG(${agentTaskHistory.durationMs})`,
+        minDuration: sql<number>`MIN(${agentTaskHistory.durationMs})`,
+        maxDuration: sql<number>`MAX(${agentTaskHistory.durationMs})`,
+        totalDuration: sql<number>`SUM(${agentTaskHistory.durationMs})`,
       })
       .from(agentTaskHistory)
       .where(
@@ -141,7 +141,7 @@ export async function getTrendsByTimeRange(
         taskName: agentTaskHistory.taskName,
         startTime: agentTaskHistory.startTime,
         status: agentTaskHistory.status,
-        duration: agentTaskHistory.duration,
+        duration: agentTaskHistory.durationMs,
       })
       .from(agentTaskHistory)
       .where(and(...conditions))

@@ -134,7 +134,9 @@ export async function analyzeFile(filePath: string, fileContent: string): Promis
       }
     });
 
-    const result = JSON.parse(response.choices[0].message.content || "{}");
+    const content = response.choices[0].message.content;
+    const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
+    const result = JSON.parse(contentStr || "{}");
     
     return result.issues.map((issue: any) => ({
       ...issue,

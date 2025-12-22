@@ -235,6 +235,9 @@ export class GateExecutor {
     });
 
     const content = response.choices[0].message.content;
+
+
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
     const spec = JSON.parse(typeof content === 'string' ? content : '{}');
 
     return {
@@ -285,6 +288,9 @@ export class GateExecutor {
     });
 
     const content = response.choices[0].message.content;
+
+
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
     const review = JSON.parse(typeof content === 'string' ? content : '{}');
 
     return {

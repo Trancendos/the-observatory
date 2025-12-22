@@ -126,7 +126,7 @@ Respond in JSON format:
     },
   });
 
-  const result = JSON.parse(response.choices[0].message.content || "{}");
+  const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)) || "{}");
 
   return {
     title: result.title,
@@ -272,7 +272,7 @@ Respond in JSON format:
     },
   });
 
-  const result = JSON.parse(response.choices[0].message.content || "{}");
+  const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)) || "{}");
   return result.endpoints || [];
 }
 
@@ -345,7 +345,7 @@ Respond in JSON format:
     },
   });
 
-  const result = JSON.parse(response.choices[0].message.content || "{}");
+  const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)) || "{}");
 
   return {
     version: currentVersion,

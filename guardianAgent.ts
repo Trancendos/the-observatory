@@ -93,6 +93,9 @@ Provide a security score from 1-10 (10 being most secure).`,
     });
 
     const content = response.choices[0].message.content;
+
+
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
     const result = JSON.parse(typeof content === 'string' ? content : '{}');
 
     // Broadcast audit completion
@@ -155,6 +158,9 @@ Provide a security score from 1-10 (10 being most secure).`,
     });
 
     const content = response.choices[0].message.content;
+
+
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
     const result = JSON.parse(typeof content === 'string' ? content : '{}');
 
     console.log(`[Guardian] GDPR compliance check complete. Compliant: ${result.compliant}`);
@@ -208,6 +214,9 @@ Provide a security score from 1-10 (10 being most secure).`,
     });
 
     const content = response.choices[0].message.content;
+
+
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
     const result = JSON.parse(typeof content === 'string' ? content : '{}');
 
     console.log(`[Guardian] CCPA compliance check complete. Compliant: ${result.compliant}`);
@@ -265,6 +274,9 @@ Provide a security score from 1-10 (10 being most secure).`,
     });
 
     const content = response.choices[0].message.content;
+
+
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
     const result = JSON.parse(typeof content === 'string' ? content : '{}');
 
     console.log(`[Guardian] OWASP compliance check complete. Compliant: ${result.compliant}`);

@@ -9,9 +9,9 @@
  * - Privacy: GDPR/CCPA compliance, data classification
  */
 
-import fs from 'fs';
-import path from 'path';
-import yaml from 'yaml';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
 import { invokeLLM } from '../_core/llm';
 
 // Load compliance framework configuration
@@ -238,7 +238,9 @@ Respond with JSON:
       }
     });
 
-    const analysis = JSON.parse(response.choices[0].message.content || '{}');
+    const content = response.choices[0].message.content;
+    const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
+    const analysis = JSON.parse(contentStr || '{}');
     violations.push(...(analysis.violations || []));
     concerns.push(...(analysis.concerns || []));
     recommendations.push(...(analysis.recommendations || []));

@@ -272,6 +272,9 @@ Respond with JSON only, no explanation.`;
   });
 
   const content = response.choices[0].message.content;
+
+
+  const contentStr = typeof content === "string" ? content : JSON.stringify(content);
   const parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
   
   const gate = GATE_DEFINITIONS.find(g => g.id === parsed.gateId);
@@ -383,6 +386,9 @@ Respond with JSON only, no explanation.`;
   });
 
   const content = response.choices[0].message.content;
+
+
+  const contentStr = typeof content === "string" ? content : JSON.stringify(content);
   const parsed = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
   
   // Convert array to object

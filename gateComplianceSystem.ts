@@ -116,7 +116,7 @@ Format as JSON:
       }
     });
     
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
     
     return {
       gateNumber: 0,
@@ -201,7 +201,7 @@ Provide pass/fail, score, findings, recommendations, and blockers as JSON.`;
       }
     });
     
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
     
     return {
       gateNumber: 2,
@@ -285,7 +285,7 @@ Provide pass/fail, score, findings, recommendations, and blockers as JSON.`;
       }
     });
     
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
     
     return {
       gateNumber: 6,
@@ -369,7 +369,7 @@ Provide pass/fail, score, findings, recommendations, and blockers as JSON.`;
       }
     });
     
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
     
     return {
       gateNumber: 8,
@@ -461,7 +461,7 @@ Provide pass/fail, score, findings, recommendations, and blockers as JSON.`;
       }
     });
     
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
     
     // Override if zero-cost mandate violated
     if (!isZeroCostCompliant) {

@@ -275,7 +275,7 @@ Detect any anomalies or suspicious patterns.`,
     },
   });
   
-  const analysis = JSON.parse(response.choices[0].message.content);
+  const analysis = JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
   
   return {
     userId,
@@ -358,7 +358,7 @@ Provide incident response plan.`,
     },
   });
   
-  return JSON.parse(response.choices[0].message.content);
+  return JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
 }
 
 /**
@@ -408,7 +408,7 @@ What can we learn? What should we change?`,
     },
   });
   
-  return JSON.parse(response.choices[0].message.content);
+  return JSON.parse((typeof response.choices[0].message.content === "string" ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)));
 }
 
 /**

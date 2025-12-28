@@ -7,7 +7,7 @@
 
 import { getDb } from "../db";
 import { mysqlTable, int, varchar, text, timestamp, boolean, json } from "drizzle-orm/mysql-core";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 // Define permissions tables inline (will be added to schema later)
 export const permissions = mysqlTable("permissions", {
@@ -232,7 +232,7 @@ export async function getUserPermissions(userId: number) {
   const perms = await db
     .select()
     .from(permissions)
-    .where(eq(permissions.id, permissionIds[0])); // TODO: Fix to support multiple IDs
+    .where(inArray(permissions.id, permissionIds));
 
   return perms;
 }

@@ -1,4 +1,6 @@
 import Stripe from 'stripe';
+import { createAgentPurchase, activateUserSubscription, updateUserSubscriptionStatus } from '../db-stripe-helpers';
+
 /**
  * Stripe Payment Service
  * 
@@ -10,7 +12,7 @@ import Stripe from 'stripe';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-11-17.clover',
+  apiVersion: '2025-11-17.clover' as any, // Cast to any to avoid TS error if version is too new
 });
 
 export interface CreateCheckoutSessionParams {
@@ -207,9 +209,55 @@ export async function handleSuccessfulPayment(session: Stripe.Checkout.Session):
       metadata,
     });
 
-    // TODO: Update database with purchase record
-    // - For Agent Marketplace: create agentPurchases record
-    // - For Mercury Trading: activate subscription
+    // 1. Handle Agent Marketplace Purchase
+    if (metadata.listingId) {
+      const listingId = parseInt(metadata.listingId);
+      const purchaseType = (session.mode === 'subscription' ? 'subscription' : 'one_time') as "one_time" | "subscription";
+
+      await createAgentPurchase({
+        userId,
+        listingId,
+        stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+        amount: session.amount_total || 0,
+        status: 'completed',
+        purchaseType,
+        subscriptionStatus: purchaseType === 'subscription' ? 'active' : null,
+        installedAt: new Date(),
+      });
+
+      console.log(`Agent purchase created for user ${userId}, listing ${listingId}`);
+    }
+
+    // 2. Handle Mercury Trading Subscription
+    if (metadata.planId) {
+      const planId = parseInt(metadata.planId);
+      let subscriptionData: Stripe.Subscription | null = null;
+
+      if (typeof session.subscription === 'string') {
+        subscriptionData = await stripe.subscriptions.retrieve(session.subscription);
+      } else if (session.subscription) {
+        subscriptionData = session.subscription as Stripe.Subscription;
+      }
+
+      if (subscriptionData) {
+        await activateUserSubscription({
+          userId,
+          planId,
+          stripeSubscriptionId: subscriptionData.id,
+          stripeCustomerId: typeof session.customer === 'string' ? session.customer : undefined,
+          status: 'active',
+          currentPeriodStart: new Date(subscriptionData.current_period_start * 1000),
+          currentPeriodEnd: new Date(subscriptionData.current_period_end * 1000),
+          cancelAtPeriodEnd: subscriptionData.cancel_at_period_end ? 1 : 0,
+        });
+
+        console.log(`User subscription activated for user ${userId}, plan ${planId}`);
+      } else {
+        console.warn(`Subscription data missing for session ${session.id}, cannot activate subscription.`);
+      }
+    }
+
   } catch (error) {
     console.error('Handle successful payment error:', error);
     throw error;

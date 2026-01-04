@@ -17,6 +17,7 @@ import { codeReviewScans, codeReviewIssues } from "../../drizzle/code-review-sch
 import { eq, and, desc } from "drizzle-orm";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { gate0_ProjectInitiation } from "./gateComplianceSystem";
 
 export interface HealingAttempt {
   issueId: string;
@@ -179,19 +180,36 @@ export async function applyAutoFix(issueId: string, healingAttempt: HealingAttem
  * Validate a fix before applying it (Gate 0 integration)
  */
 export async function validateFix(healingAttempt: HealingAttempt): Promise<{ passed: boolean; errors?: string[] }> {
-  // TODO: Integrate with Gate 0 validation system
-  // For now, perform basic syntax check
-
   const errors: string[] = [];
 
-  // Check if fixed code is not empty
+  // Basic checks
   if (!healingAttempt.fixedCode || healingAttempt.fixedCode.trim().length === 0) {
     errors.push("Fixed code is empty");
   }
 
-  // Check if confidence is above threshold
   if (healingAttempt.confidence < 0.7) {
     errors.push(`Confidence too low: ${healingAttempt.confidence}`);
+  }
+
+  // Gate 0 Integration
+  try {
+    const gateResult = await gate0_ProjectInitiation(
+      `Fix for Issue ${healingAttempt.issueId}`,
+      healingAttempt.explanation,
+      [`Resolve issue ${healingAttempt.issueId}`, "Ensure code quality"],
+      0.1 // Estimated duration in weeks
+    );
+
+    if (!gateResult.passed) {
+      if (gateResult.blockers && gateResult.blockers.length > 0) {
+        errors.push(...gateResult.blockers);
+      } else {
+        // Fallback if passed is false but no explicit blockers listed
+        errors.push("Gate 0 validation failed without specific blockers");
+      }
+    }
+  } catch (error: any) {
+    errors.push(`Gate 0 validation failed: ${error.message}`);
   }
 
   return {
